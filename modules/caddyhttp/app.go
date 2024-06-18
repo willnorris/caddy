@@ -364,6 +364,17 @@ func (app *App) Validate() error {
 	return nil
 }
 
+// wrappedListener allows accessing a wrapped listener from a wrapper that doesn't expose it.
+type wrappedListener struct {
+	net.Listener              // embedded outer listener that receives method calls
+	wrapped      net.Listener // inner listener returned by Unwrap()
+}
+
+// Unwrap returns the wrapped listener.
+func (h *wrappedListener) Unwrap() net.Listener {
+	return h.wrapped
+}
+
 // Start runs the app. It finishes automatic HTTPS if enabled,
 // including management of certificates.
 func (app *App) Start() error {
@@ -452,7 +463,8 @@ func (app *App) Start() error {
 				useTLS := len(srv.TLSConnPolicies) > 0 && int(listenAddr.StartPort+portOffset) != app.httpPort()
 				if useTLS {
 					// create TLS listener - this enables and terminates TLS
-					ln = tls.NewListener(ln, tlsCfg)
+					tlsln := tls.NewListener(ln, tlsCfg)
+					ln = &wrappedListener{Listener: tlsln, wrapped: ln}
 
 					// enable HTTP/3 if configured
 					if srv.protocol("h3") {

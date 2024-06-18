@@ -25,6 +25,11 @@ type http2Listener struct {
 	h2server *http2.Server
 }
 
+// Unwrap returns the wrapped listener.
+func (h *http2Listener) Unwrap() net.Listener {
+	return h.Listener
+}
+
 type connectionStateConn interface {
 	net.Conn
 	ConnectionState() tls.ConnectionState
